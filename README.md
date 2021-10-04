@@ -113,7 +113,7 @@ python3 create_client_session.py
 
 **Azizul Hakim Shakil** - [@ShakilAzizul](https://twitter.com/ShakilAzizul) - azizulhakim.shakil18@gmail.com
 
-Project Link: [https://github.com/shakil18/SecureDeploymentProcess](https://github.com/rcrane/Secure-Deployment-Process)
+Project Link: [https://github.com/shakil18/Secure-Deployment-Process](https://github.com/rcrane/Secure-Deployment-Process)
 
 <br/>
 
