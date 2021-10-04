@@ -1,0 +1,31 @@
+# Default values for las.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image: $SCONE_LAS_IMAGE
+imagePullPolicy: IfNotPresent
+
+service:
+  enabled: false
+  type: ClusterIP
+  port: 18766
+  hostPort: true
+
+securityContext: {}
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+extraVolumes:
+  - name: dev-isgx
+    hostPath:
+      path: $DEVICE
+
+extraVolumeMounts:
+  - name: dev-isgx
+    path: $DEVICE
+
+useSGXDevPlugin: "disabled"

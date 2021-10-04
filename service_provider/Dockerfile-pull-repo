@@ -1,0 +1,8 @@
+# Docker image to execute binaryfs for pulling client-repo
+
+FROM registry.scontain.com:5050/sconecuratedimages/python:3.9.0-alpine3.12
+COPY ./libbinary-fs.so /usr/local/lib/
+
+RUN apk add --no-cache patchelf && \
+    patchelf --add-needed libbinary-fs.so `which python3` && \
+    apk del patchelf

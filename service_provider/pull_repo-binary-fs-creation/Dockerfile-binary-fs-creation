@@ -1,0 +1,63 @@
+# collect files for binary-fs
+
+FROM registry.scontain.com:5050/sconecuratedimages/python:3.9.0-alpine3.12 AS binary-fs
+
+RUN pip install --upgrade pip
+
+RUN apk --no-cache --update add build-base
+RUN apk add --update alpine-sdk
+RUN apk add libffi-dev openssl-dev cmake
+
+RUN wget https://github.com/libgit2/libgit2/releases/download/v1.1.0/libgit2-1.1.0.tar.gz
+RUN tar -xf libgit2-1.1.0.tar.gz
+COPY git-scone-libgit_1_1_0.patch /libgit2-1.1.0/git-scone-libgit_1_1_0.patch
+RUN cd libgit2-1.1.0/ && echo "ADD_DEFINITIONS(-DNO_MMAP)" >> src/CMakeLists.txt && git apply git-scone-libgit_1_1_0.patch && cmake -D BUILD_CLAR=OFF . && make -j4 install
+RUN cp /usr/local/lib64/libgit2.so /usr/lib/libgit2.so.1.1
+
+RUN pip3 install pygit2
+
+COPY pull_repo.py /
+
+RUN SCONE_MODE=hw scone binaryfs / /binary-fs.c -v \
+        -h '/etc/resolv.conf' \
+        --include '/usr/local/lib/*' \
+#		 --include '/usr/local/lib/python3.9/*' \
+#		 --include '/usr/local/lib/libpython3.9.so.1.0' \
+        --include '/usr/lib/libgit2.so.1.1' \
+        --include '/usr/lib/libssl.so.1.1' \
+        --include '/usr/lib/libffi.so' \
+        --include '/usr/lib/libffi.so.7' \
+        --include '/usr/lib/libffi.so.7.1.0' \
+        --include '/lib/*' \
+#        --include '/lib/libssl.so.1.1' \
+#        --include '/lib/libcrypto.so.1.1' \
+#        --include '/lib/libz.so.1' \
+#        --include '/lib/libz.so.1.2.11' \
+        --include '/etc/ssl/*' \
+        --include /pull_repo.py
+
+
+### create binary-fs
+
+FROM registry.scontain.com:5050/sconecuratedimages/crosscompilers:alpine AS crosscompiler
+
+COPY --from=binary-fs /binary-fs.c /.
+
+RUN scone gcc /binary-fs.c -O0 -shared -o /libbinary-fs.so
+
+### Run binary-fs
+
+#FROM registry.scontain.com:5050/sconecuratedimages/python:3.9.0-alpine3.12
+#COPY --from=crosscompiler /libbinary-fs.so /.
+
+#RUN apk add --no-cache patchelf && \
+#    patchelf --add-needed libbinary-fs.so `which python3` && \
+#    apk del patchelf
+
+
+#ENV SCONE_HEAP=256M
+#ENV SCONE_LOG=debug
+#ENV LD_LIBRARY_PATH="/"
+#ENV SCONE_ALLOW_DLOPEN=2
+
+CMD sh -c "python3 /pull_repo.py"

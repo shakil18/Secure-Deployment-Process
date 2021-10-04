@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# ensure that we have self-signed client certificate
+if [[ ! -f client.pem || ! -f client-key.pem  ]] ; then
+    openssl req -newkey rsa:4096 -days 365 -nodes -x509 -out client.pem -keyout client-key.pem -config clientcertreq.conf
+fi

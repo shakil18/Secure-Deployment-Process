@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Client Session</title>
+</head>
+<body>
+    <!-- download client-session-template.yml    -->
+    <div class="container" align="left">
+        <p>Download the <b>session-template</b> file: <a href="/download_template_session/" target="blank"><button>Download</button></a></p>
+    </div>
+
+    <!-- post session-id -->
+    <form action="/upload_client_session/" method=post enctype=multipart/form-data>
+        <label for="session_id">Here is the Session-Id:</label>
+        <input type="text" id="session_id" name="session_id">
+        <input type=submit value=Submit>
+    </form>
+
+    <!-- Clean the system -->
+    <div class="cleanup_system" align="left">
+        <p>Clean the system: <a href="/cleanup_system/" target="blank" onclick="cleanupFunction()"><button>Clean</button></a></p>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+    <script>
+    function cleanupFunction(){
+        alert("Hi, the system is cleaned up!");
+    }
+    </script>
+</body>
+</html>

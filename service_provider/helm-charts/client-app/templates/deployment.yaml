@@ -1,0 +1,110 @@
+{{- if not .Values.useSGXDevPlugin }}
+{{- required "A valid '.Values.useSGXDevPlugin' is required: \"enabled\"|\"disabled\"" .value }}
+{{- else if and (ne .Values.useSGXDevPlugin "enabled") (ne .Values.useSGXDevPlugin "disabled") }}
+{{- required "A valid '.Values.useSGXDevPlugin' is required: \"enabled\"|\"disabled\"" .value }}
+{{- end }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.clientApp.name }}
+  # {{ include "generic.fullname" . }}
+  labels:
+    app: {{ .Values.clientApp.name }}
+    group: {{ .Values.clientApp.name }}
+    # {{- include "generic.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.clientApp.name }}
+      # {{- include "generic.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.clientApp.name }}
+        group: {{ .Values.clientApp.name }}
+        # {{- include "generic.selectorLabels" . | nindent 8 }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+        {{- if eq .Values.useSGXDevPlugin "disabled" }}
+        - hostPath:
+            path: {{ .Values.extraSGXVolumes.hostPath }}
+          name: {{ .Values.extraSGXVolumes.name }}
+        {{- end }}
+        - hostPath:
+            path: {{ .Values.extraClientAppRepoVolumes.hostPath }}
+          name: {{ .Values.extraClientAppRepoVolumes.name }}
+      containers:
+        - name: {{ .Values.clientApp.name }}
+          {{- if .Values.command }}
+          command: {{ .Values.command }}
+          {{- end }}
+          args:
+          {{  range .Values.arguments }}
+            - {{ . }}
+          {{ end }}
+          securityContext:
+          {{- if eq .Values.useSGXDevPlugin "enabled" }}
+            capabilities:
+              add: ["SYS_RAWIO"]
+          {{- else }}
+            privileged: true
+          {{- end}}
+          image: "{{ .Values.image }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          ports:
+            - name: port1
+              containerPort: {{ .Values.service.containerPort }}
+              protocol: TCP
+          env:
+            {{- if .Values.extraEnvVars }}
+            {{- toYaml .Values.extraEnvVars | nindent 12 }}
+            {{- end }}
+            {{- if .Values.scone.cas }}
+            - name: SCONE_CAS_ADDR
+              value: {{ .Values.scone.cas }}
+            {{- end }}
+            {{- if .Values.scone.las }}
+            - name: SCONE_LAS_ADDR
+              value: {{ .Values.scone.las }}
+            {{- end }}
+            {{- if .Values.scone.configID }}
+            - name: SCONE_CONFIG_ID
+              value: {{ .Values.scone.configID }}
+            {{- end }}
+          {{- if or (.Values.resources) (eq .Values.useSGXDevPlugin "enabled") }}
+          resources:
+          {{- if .Values.resources }}
+          {{- toYaml .Values.resources | nindent 12 }}
+          {{- end }}
+          {{- if eq .Values.useSGXDevPlugin "enabled" }}
+            limits:
+              sgx.k8s.io/sgx: 1
+          {{- end }}
+          {{- end }}
+          volumeMounts:
+            {{- if eq .Values.useSGXDevPlugin "disabled" }}
+            - name: {{ .Values.extraSGXVolumeMounts.name }}
+              mountPath: {{ .Values.extraSGXVolumeMounts.path }}
+            {{- end }}
+            - name: {{ .Values.extraClientAppRepoVolumeMounts.name }}
+              mountPath: {{ .Values.extraClientAppRepoVolumeMounts.path }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}

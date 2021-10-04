@@ -1,0 +1,9 @@
+apiVersion: v2
+description: Deploy SCONE Client-app to Kubernetes
+maintainers:
+- email: azizul_hakim.shakil@mailbox.tu-dresden.de
+  name: Shakil
+name: client-app
+type: application
+version: 0.1.0
+appVersion: 0.1.0

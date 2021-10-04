@@ -1,0 +1,54 @@
+version: "0.3"
+name: $SESSION
+
+services:
+   - name: pull_repo
+     image_name: pull_repo
+     mrenclaves: [$PULL_REPO_MRENCLAVE]
+     command: "python3 /pull_repo.py"
+     environment:
+      SCONE_MODE: hw
+      USER_ACCESS_TOKEN: $$SCONE::user_access_token$$
+      USER_GIT_REPO: $$SCONE::user_git_repo$$
+     pwd: /
+
+   - name: client-app
+     image_name: client-app
+     mrenclaves: [$CLIENT_INT_MRENCLAVE]
+     command: "python3 /home/client-app/repo/client-app.py"
+#     command: "node /home/client-app/repo/client-app.js"
+#     command: "lua /home/client-app/repo/client-app.lua"
+#     command: "R -f /home/client-app/repo/client-app.r"
+#     command: "java ClientApp"
+     environment:
+      SCONE_MODE: hw
+     pwd: /
+
+secrets:
+   - name: user_access_token
+     kind: ascii
+     value: "$ACCESS_TOKEN"
+   - name: user_git_repo
+     kind: ascii
+     value: "$GIT_REPO"
+
+volumes:
+   - name: genesis
+
+images:
+   - name: pull_repo
+     volumes:
+       - name: genesis
+         path: /home/client-app
+         update_policy: rollback_protected
+
+   - name: client-app
+     volumes:
+       - name: genesis
+         path: /home/client-app
+         update_policy: rollback_protected
+
+security:
+   attestation:
+     tolerate: [debug-mode, insecure-igpu, outdated-tcb]
+     ignore_advisories: "*"

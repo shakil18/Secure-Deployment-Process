@@ -1,0 +1,81 @@
+diff --git a/src/map.h b/src/map.h
+index 6328d8cf4..4708afe66 100644
+--- a/src/map.h
++++ b/src/map.h
+@@ -27,12 +27,21 @@
+ #define MAP_FAILED 0
+ #endif
+ 
++typedef struct {
++       size_t offset;
++       int fd;
++       int prot;
++} git_map_args;
++
+ typedef struct { /* memory mapped buffer	*/
+ 	void *data; /* data bytes			*/
+ 	size_t len; /* data length			*/
+ #ifdef GIT_WIN32
+ 	HANDLE fmh; /* file mapping handle */
+ #endif
++#ifdef NO_MMAP
++       git_map_args args;
++#endif
+ } git_map;
+ 
+ #define GIT_MMAP_VALIDATE(out, len, prot, flags) do { \
+diff --git a/src/pack.h b/src/pack.h
+index cebfcd1bd..a217e36e8 100644
+--- a/src/pack.h
++++ b/src/pack.h
+@@ -20,7 +20,7 @@
+ #include "oidmap.h"
+ #include "zstream.h"
+ 
+-#define GIT_PACK_FILE_MODE 0444
++#define GIT_PACK_FILE_MODE 0644
+ 
+ #define PACK_SIGNATURE 0x5041434b	/* "PACK" */
+ #define PACK_VERSION 2
+diff --git a/src/posix.c b/src/posix.c
+index fbaa7c3ca..ce3950a2b 100644
+--- a/src/posix.c
++++ b/src/posix.c
+@@ -241,12 +241,12 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, off64_t offset
+ 
+ 	out->data = NULL;
+ 	out->len = 0;
+-
++#if 0
+ 	if ((prot & GIT_PROT_WRITE) && ((flags & GIT_MAP_TYPE) == GIT_MAP_SHARED)) {
+ 		git_error_set(GIT_ERROR_OS, "trying to map shared-writeable");
+ 		return -1;
+ 	}
+-
++#endif
+ 	out->data = git__malloc(len);
+ 	GIT_ERROR_CHECK_ALLOC(out->data);
+ 
+@@ -258,12 +258,22 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, off64_t offset
+ 	}
+ 
+ 	out->len = len;
++    out->args.offset = offset;
++    out->args.fd = fd;
++    out->args.prot = prot;
+ 	return 0;
+ }
+ 
+ int p_munmap(git_map *map)
+ {
+ 	assert(map != NULL);
++    if (map->args.prot & GIT_PROT_WRITE) {
++        if (p_lseek(map->args.fd, map->args.offset, SEEK_SET) < 0 ||
++                p_write(map->args.fd, map->data, map->len) != (ssize_t)map->len) {
++                git_error_set(GIT_ERROR_OS, "mmap emulation failed in unmap");
++                return -1;
++        }
++    }
+ 	git__free(map->data);
+ 
+ 	return 0;
